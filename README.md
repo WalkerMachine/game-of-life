@@ -54,7 +54,7 @@ The game continues to evolve generation by generation, creating various patterns
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/WalkerMachine/game-of-life/blob/main/LICENSE.txt) file for details.
 
 ---
 
