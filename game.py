@@ -1,3 +1,6 @@
+import sys
+from pygame_gui.ui_manager import UIManager
+import pygame_gui
 import pygame
 import random
 
@@ -25,6 +28,9 @@ class GameOfLife:
         self.playing = False
         self.counter = 0
         self.update_rate = 120
+        # Creating UI manager to handle GUI elements
+        pygame.init()
+        self.ui_manager = UIManager((self.width, self.height))
 
     def draw_grid(self, positions):
         """
@@ -149,6 +155,7 @@ class GameOfLife:
         self.counter = 0
         update_rate = 120
         positions = set()
+        settings = Settings()
 
         while running:
             self.clock.tick(self.fps)
@@ -190,6 +197,12 @@ class GameOfLife:
                     if event.key == pygame.K_n:
                         positions = self.gen_positions(random.randrange(3, 10) * self.grid_width)
 
+                    if event.key == pygame.K_s:  # Show settings menu
+                        self.show_settings_menu(settings)
+
+                    if event.key == pygame.K_q:
+                        running = False
+
             # Draw the background
             self.screen.fill(BLACK)
 
@@ -199,3 +212,116 @@ class GameOfLife:
             pygame.display.update()
 
         pygame.quit()
+
+    def show_settings_menu(self, settings):
+        font = pygame.font.Font(None, 36)
+        text_speed = ''
+        text_cell_color = ''
+        text_bg_color = ''
+
+        input_rect_speed = pygame.Rect(200, 100, 140, 32)
+        input_rect_cell_color = pygame.Rect(200, 200, 140, 32)
+        input_rect_bg_color = pygame.Rect(200, 300, 140, 32)
+
+        color_active = pygame.Color('lightskyblue3')
+        color_inactive = pygame.Color('dodgerblue2')
+
+        entry_speed = pygame_gui.elements.UITextEntryLine(relative_rect=input_rect_speed, manager=self.ui_manager)
+        entry_speed.set_text(text_speed)
+
+        entry_cell_color = pygame_gui.elements.UITextEntryLine(relative_rect=input_rect_cell_color,
+                                                               manager=self.ui_manager)
+        entry_cell_color.set_text(text_cell_color)
+
+        entry_bg_color = pygame_gui.elements.UITextEntryLine(relative_rect=input_rect_bg_color, manager=self.ui_manager)
+        entry_bg_color.set_text(text_bg_color)
+
+        button_apply = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((10, 400), (100, 32)), text="Apply",
+                                                    manager=self.ui_manager)
+        button_cancel = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((120, 400), (100, 32)), text="Cancel",
+                                                     manager=self.ui_manager)
+
+        clock = pygame.time.Clock()
+        running = True
+
+        while running:
+            time_delta = clock.tick(self.fps) / 1000.0
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+                if event.type == pygame.USEREVENT:
+                    if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+                        if event.ui_element == button_apply:
+                            # Handle apply button action
+                            try:
+                                settings.update_speed(int(entry_speed.get_text()))
+                            except ValueError:
+                                pass
+
+                            try:
+                                cell_color = pygame.Color(entry_cell_color.get_text())
+                                settings.update_colors(cell_color, settings.background_color)
+                            except ValueError:
+                                pass
+
+                            try:
+                                bg_color = pygame.Color(entry_bg_color.get_text())
+                                settings.update_colors(settings.cell_color, bg_color)
+                            except ValueError:
+                                pass
+
+                            # Close the settings menu
+                            return
+                        elif event.ui_element == button_cancel:
+                            # Close the settings menu without applying changes
+                            return
+                # Process GUI events
+                self.ui_manager.process_events(event)
+
+            # Update GUI elements
+            self.ui_manager.update(time_delta)
+
+            # Draw the settings menu
+            self.screen.fill(settings.background_color)
+
+            # Draw text entry boxes and labels
+            color = color_active if entry_speed.is_focused else color_inactive
+            pygame.draw.rect(self.screen, color, input_rect_speed, 2)
+            text_surface = font.render('Game Speed (ms):', True, color)
+            self.screen.blit(text_surface, (10, 100))
+            input_rect_speed.w = max(200, text_surface.get_width() + 10)
+
+            color = color_active if entry_cell_color.is_focused else color_inactive
+            pygame.draw.rect(self.screen, color, input_rect_cell_color, 2)
+            text_surface = font.render('Cell Color (e.g., R,G,B):', True, color)
+            self.screen.blit(text_surface, (10, 200))
+            input_rect_cell_color.w = max(200, text_surface.get_width() + 10)
+
+            color = color_active if entry_bg_color.is_focused else color_inactive
+            pygame.draw.rect(self.screen, color, input_rect_bg_color, 2)
+            text_surface = font.render('Background Color (e.g., R,G,B):', True, color)
+            self.screen.blit(text_surface, (10, 300))
+            input_rect_bg_color.w = max(200, text_surface.get_width() + 10)
+
+            # Draw GUI elements
+            self.ui_manager.draw_ui(self.screen)
+
+            pygame.display.flip()
+
+        pygame.quit()
+
+
+class Settings:
+    def __init__(self):
+        self.game_speed = 120  # Initial game speed
+        self.cell_color = GREEN  # Initial cell color
+        self.background_color = BLACK  # Initial background color
+
+    def update_speed(self, speed):
+        self.game_speed = speed
+
+    def update_colors(self, cell_color, background_color):
+        self.cell_color = cell_color
+        self.background_color = background_color
